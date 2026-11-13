@@ -24,18 +24,22 @@ jobs:
         working-directory: host
         shell: bash
         run: |
-          npm ci
-          if ($LASTEXITCODE -ne 0) { npm install }
+          npm ci || npm install
           node --check src/host.js
           node --check src/cli.js
           npx -y pkg@5.8.1 . --targets node18-win-x64 --output dist/PulseEngine.exe
 
+      - name: 暂存 Tauri 引擎资源
+        shell: bash
+        run: |
+          mkdir -p src-tauri/assets
+          cp host/dist/PulseEngine.exe src-tauri/assets/PulseEngine.exe
+
       - name: 安装并构建中文界面
         working-directory: ui
-        shell: pwsh
+        shell: bash
         run: |
-          npm ci
-          if ($LASTEXITCODE -ne 0) { npm install }
+          npm ci || npm install
           npm run build
 
       - name: Rust 单元测试
