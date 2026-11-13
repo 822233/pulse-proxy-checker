@@ -110,12 +110,13 @@ macOS 版本可能未进行开发者签名。首次打开时，如果系统阻�
 - Rust stable
 - 对应操作系统的 Tauri v2 构建依赖
 
-安装并测试检测引擎：
+安装检测引擎依赖并检查入口脚本语法（当前 host/package.json 未定义 `npm test`）：
 
 ```bash
 cd host
 npm install
-npm test
+node --check src/host.js
+node --check src/cli.js
 ```
 
 构建前端：
