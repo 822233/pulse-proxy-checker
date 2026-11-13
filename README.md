@@ -102,6 +102,8 @@ macOS 版本可能未进行开发者签名。首次打开时，如果系统阻�
 
 ## 从源码构建
 
+以下命令按仓库当前脚本整理；检测引擎目前没有声明 `npm test`，Rust 侧提供 `cargo test` 单元测试。
+
 环境要求：
 
 - Node.js 18 或更高版本
@@ -128,6 +130,7 @@ npm run build
 
 ```bash
 cd ../src-tauri
+cargo test
 cargo tauri build
 ```
 
