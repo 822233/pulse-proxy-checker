@@ -253,7 +253,7 @@ async function copyToClipboard(text, btn, label) {
   setTimeout(() => (btn.textContent = old || label), 1200);
 }
 
-copyBtn.addEventListener("click", () => copyToClipboard(visibleWorking().map((r) => r.raw).join("\n"), copyBtn, "Copy"));
+copyBtn.addEventListener("click", () => copyToClipboard(visibleWorking().map((r) => r.raw).join("\n"), copyBtn, "复制"));
 
 async function exportToFile(content, filename, btn) {
   try {
@@ -584,7 +584,7 @@ removeDeadBtn.addEventListener("click", async () => {
 });
 
 const savedVisibleWorking = () => savedPool.filter((r) => r.ok && passesSavedFilter(r));
-savedCopyBtn.addEventListener("click", () => copyToClipboard(savedVisibleWorking().map((r) => r.raw).join("\n"), savedCopyBtn, "Copy"));
+savedCopyBtn.addEventListener("click", () => copyToClipboard(savedVisibleWorking().map((r) => r.raw).join("\n"), savedCopyBtn, "复制"));
 savedExportBtn.addEventListener("click", () =>
   exportToFile(savedVisibleWorking().map((r) => r.raw).join("\n"), `proxies-${savedScheme}-${stamp()}.txt`, savedExportBtn)
 );
@@ -603,7 +603,7 @@ refreshCount();
   const text = $("update-text");
   const download = $("update-download");
   const dismiss = $("update-dismiss");
-  let updateUrl = "https://github.com/lewispour/pulse-proxy-checker/releases/latest";
+  let updateUrl = "https://github.com/822233/pulse-proxy-checker/releases/latest";
 
   dismiss.addEventListener("click", () => { banner.hidden = true; });
   download.addEventListener("click", async (e) => {
