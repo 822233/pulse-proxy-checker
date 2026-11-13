@@ -137,7 +137,7 @@ findAliveBtn.addEventListener("click", async () => {
     await invoke("find_alive_proxies", { protocol: selectedScheme, options: collectOptions({ limit: 0, concurrency: conc }) });
     finishCheck();
   } catch (err) {
-    if (!cancelled) checkStatus.textContent = "获取代理失败：" + err;
+    if (!cancelled) checkStatus.textContent = "获取代理失败：" + translateError(err);
   } finally {
     checkRunning = false;
     findAliveBtn.disabled = false;
@@ -372,7 +372,7 @@ checkBtn.addEventListener("click", async () => {
     await invoke("check_proxies_native", { proxies: list, options: collectOptions() });
     finishCheck();
   } catch (err) {
-    if (!cancelled) checkStatus.textContent = "检测失败：" + err;
+    if (!cancelled) checkStatus.textContent = "检测失败：" + translateError(err);
   } finally {
     checkRunning = false;
     checkBtn.disabled = false;
@@ -460,17 +460,34 @@ function buildRow(r) {
 }
 
 function translateError(value) {
-  const messages = {
-    "Failed": "检测失败",
-    "timeout": "连接超时",
-    "ECONNREFUSED": "连接被拒绝",
-    "ETIMEDOUT": "连接超时",
-    "no response": "无响应"
-  };
-  const text = String(value || "");
-  for (const [key, label] of Object.entries(messages)) {
+  const text = String(value || "").trim();
+  const messages = [
+    ["parse error", "代理地址格式无法识别"],
+    ["not forwarding", "代理未正确转发请求"],
+    ["ECONNREFUSED", "代理服务器拒绝连接"],
+    ["ECONNRESET", "连接被对端重置"],
+    ["ENOTFOUND", "域名解析失败"],
+    ["EHOSTUNREACH", "目标主机不可达"],
+    ["ENETUNREACH", "网络不可达"],
+    ["ETIMEDOUT", "连接超时"],
+    ["timeout", "连接超时"],
+    ["no response", "未收到响应"],
+    ["Failed to spawn engine", "检测引擎启动失败"],
+    ["resource dir", "无法定位程序资源目录"],
+    ["app data dir", "无法访问应用数据目录"],
+    ["create saved dir", "无法创建代理池目录"],
+    ["serialize", "代理池数据处理失败"],
+    ["write saved", "代理池保存失败"],
+    ["could not resolve a download directory", "无法定位下载目录"],
+    ["write failed", "导出文件写入失败"],
+    ["Error sending message", "向检测引擎发送数据失败"],
+    ["engine task join error", "检测任务异常中断"],
+    ["unknown message type", "检测引擎返回了无法识别的消息"]
+  ];
+  for (const [key, label] of messages) {
     if (text.toLowerCase().includes(key.toLowerCase())) return label;
   }
+  if (!text || text.toLowerCase() === "failed") return "操作失败，请重试";
   return text;
 }
 
@@ -558,7 +575,7 @@ recheckBtn.addEventListener("click", async () => {
     const alive = savedPool.filter((r) => r.ok).length;
     savedStatus.textContent = `重新检测完成 — ${alive}/${savedPool.length} 个仍然可用`;
   } catch (err) {
-    savedStatus.textContent = "重新检测失败：" + err;
+    savedStatus.textContent = "重新检测失败：" + translateError(err);
   } finally {
     savedRecheckActive = false;
     recheckBtn.disabled = false;
