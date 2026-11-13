@@ -1,17 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pulse — Proxy Checker</title>
+    <title>Pulse 中文版 — 代理检测工具</title>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <div id="app">
       <div class="update-banner" id="update-banner" hidden>
-        <span id="update-text">A new version of Pulse is available.</span>
-        <a class="update-download" id="update-download" href="#">Download ↗</a>
-        <button class="update-dismiss" id="update-dismiss" title="Dismiss">✕</button>
+        <span id="update-text">Pulse 有新版本可用。</span>
+        <a class="update-download" id="update-download" href="#">下载 ↗</a>
+        <button class="update-dismiss" id="update-dismiss" title="关闭">✕</button>
       </div>
       <header class="topbar">
         <div class="brand">
@@ -34,7 +34,7 @@
             </svg>
           </span>
           <span class="brand-name">Pulse</span>
-          <span class="brand-tag">proxy checker</span>
+          <span class="brand-tag">代理检测工具</span>
         </div>
         <!-- DB-IP Lite (CC BY 4.0) requires this attribution on screens using the data. -->
         <a class="attribution" href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>
@@ -43,27 +43,27 @@
       <!-- ======================= INPUT VIEW ======================= -->
       <main class="content" id="view-input">
         <div class="mode-tabs">
-          <button class="mode-tab active" data-mode="paste">Paste</button>
-          <button class="mode-tab" data-mode="free">Free Proxies</button>
-          <button class="mode-tab" data-mode="saved">Saved Proxies</button>
+          <button class="mode-tab active" data-mode="paste">粘贴检测</button>
+          <button class="mode-tab" data-mode="free">免费代理</button>
+          <button class="mode-tab" data-mode="saved">已保存代理</button>
         </div>
 
         <div class="content-head">
-          <h1 id="page-title">Paste Your Proxies</h1>
+          <h1 id="page-title">粘贴代理列表</h1>
           <div class="controls">
             <label class="field-inline">
-              Concurrency
+              并发数
               <input id="concurrency" type="number" min="1" max="500" value="100" />
             </label>
             <label class="field-inline">
-              Timeout (ms)
+              超时时间（毫秒）
               <input id="timeout" type="number" min="1000" step="500" value="6000" />
             </label>
           </div>
         </div>
 
         <div class="protocol-row">
-          <span class="protocol-label">Protocol:</span>
+          <span class="protocol-label">代理协议：</span>
           <div class="pill-group" id="protocol-group">
             <button class="pill active" data-scheme="http">HTTP</button>
             <button class="pill" data-scheme="https">HTTPS</button>
@@ -73,28 +73,28 @@
         </div>
 
         <div class="free-bar" id="free-bar" hidden>
-          <button class="btn-primary" id="btn-find-alive">⚡ Find Alive Proxies</button>
-          <span class="free-status" id="free-status">Pulls fresh proxies from public lists, then checks which are alive.</span>
+          <button class="btn-primary" id="btn-find-alive">⚡ 自动获取并检测</button>
+          <span class="free-status" id="free-status">从公开代理列表获取节点，并自动检测可用性。</span>
         </div>
 
         <textarea
           id="proxy-input"
           class="proxy-input"
           spellcheck="false"
-          placeholder="Paste proxy list in any of these formats:
+          placeholder="请粘贴代理列表，支持以下格式：
   • {host}:{port}
   • {host}:{port}:{username}:{password}
   • {host}:{port}@{username}:{password}
   • {scheme}://{host}:{port}
   • {scheme}://{username}:{password}@{host}:{port}
-  ({scheme} = http, https, socks4, socks5 — defaults to the Protocol selected above)"
+  ({scheme} = http, https, socks4, socks5 — 未指定协议时，使用上方选择的协议)"
         ></textarea>
 
         <div class="footer-row">
           <span class="counter"><span class="info-dot">ⓘ</span> <b id="proxy-count">0</b> proxies</span>
           <div class="footer-actions">
-            <button class="btn-ghost" id="btn-clear">Clear</button>
-            <button class="btn-primary" id="btn-check" disabled>Check Proxies</button>
+            <button class="btn-ghost" id="btn-clear">清空</button>
+            <button class="btn-primary" id="btn-check" disabled>开始检测</button>
           </div>
         </div>
       </main>
@@ -104,45 +104,45 @@
         <div class="content-head">
           <div class="check-title">
             <button class="btn-back" id="btn-back">←</button>
-            <h1 id="check-title">Checking proxies…</h1>
+            <h1 id="check-title">正在检测代理…</h1>
           </div>
           <div class="footer-actions">
-            <button class="btn-ghost" id="btn-save-all" disabled>💾 Save all working</button>
-            <button class="btn-ghost" id="btn-save-working" disabled>💾 Save filtered</button>
-            <button class="btn-ghost" id="btn-copy" disabled>Copy</button>
-            <button class="btn-ghost" id="btn-export" disabled>Export</button>
+            <button class="btn-ghost" id="btn-save-all" disabled>💾 保存全部可用</button>
+            <button class="btn-ghost" id="btn-save-working" disabled>💾 保存筛选结果</button>
+            <button class="btn-ghost" id="btn-copy" disabled>复制</button>
+            <button class="btn-ghost" id="btn-export" disabled>导出</button>
           </div>
         </div>
 
         <div class="results-head">
-          <div class="stat"><b id="stat-total">0</b><span>total</span></div>
-          <div class="stat ok"><b id="stat-working">0</b><span>working</span></div>
-          <div class="stat dead"><b id="stat-dead">0</b><span>dead</span></div>
+          <div class="stat"><b id="stat-total">0</b><span>总数</span></div>
+          <div class="stat ok"><b id="stat-working">0</b><span>可用</span></div>
+          <div class="stat dead"><b id="stat-dead">0</b><span>失效</span></div>
           <div class="progress"><div class="bar" id="progress-bar"></div></div>
         </div>
         <div class="check-status" id="check-status"></div>
 
         <!-- filter bar (shared markup pattern, this instance drives the checker list) -->
         <div class="filter-bar" id="filter-bar">
-          <label class="toggle"><input type="checkbox" id="hide-dead" checked /> Hide non-working</label>
-          <label class="field-inline">Risk
-            <select id="f-risk"><option value="">All</option><option>Low</option><option>Medium</option><option>High</option></select>
+          <label class="toggle"><input type="checkbox" id="hide-dead" checked /> 隐藏不可用代理</label>
+          <label class="field-inline">风险等级
+            <select id="f-risk"><option value="">全部</option><option value="Low">低</option><option value="Medium">中</option><option value="High">高</option></select>
           </label>
-          <label class="field-inline">Country
-            <select id="f-country"><option value="">All</option></select>
+          <label class="field-inline">国家/地区
+            <select id="f-country"><option value="">全部</option></select>
           </label>
-          <label class="field-inline">Max latency (ms)
-            <input id="f-latency" type="number" min="0" step="500" placeholder="any" />
+          <label class="field-inline">最大延迟（毫秒）
+            <input id="f-latency" type="number" min="0" step="500" placeholder="不限" />
           </label>
-          <label class="field-inline">Min quality (%)
-            <input id="f-quality" type="number" min="0" max="100" step="5" placeholder="any" />
+          <label class="field-inline">最低质量（%）
+            <input id="f-quality" type="number" min="0" max="100" step="5" placeholder="不限" />
           </label>
           <span class="filter-count" id="filter-count"></span>
         </div>
 
         <div class="results-cols">
-          <span></span><span>Proxy</span><span>Status</span><span>Country</span>
-          <span>Resolved IP</span><span>Quality</span><span>Risk</span><span>Latency</span>
+          <span></span><span>代理地址</span><span>状态</span><span>国家/地区</span>
+          <span>出口 IP</span><span>质量</span><span>风险</span><span>延迟</span>
         </div>
         <div class="results-list big" id="results-list"></div>
       </main>
@@ -150,12 +150,12 @@
       <!-- ======================= SAVED PROXIES VIEW ======================= -->
       <main class="content" id="view-saved" hidden>
         <div class="mode-tabs">
-          <button class="mode-tab" data-mode="paste">Paste</button>
-          <button class="mode-tab" data-mode="free">Free Proxies</button>
-          <button class="mode-tab active" data-mode="saved">Saved Proxies</button>
+          <button class="mode-tab" data-mode="paste">粘贴检测</button>
+          <button class="mode-tab" data-mode="free">免费代理</button>
+          <button class="mode-tab active" data-mode="saved">已保存代理</button>
         </div>
         <div class="content-head">
-          <h1>Saved Proxies</h1>
+          <h1>已保存代理</h1>
           <div class="footer-actions">
             <div class="pill-group" id="saved-proto-group">
               <button class="pill active" data-scheme="http">HTTP</button>
@@ -166,34 +166,34 @@
           </div>
         </div>
         <div class="footer-actions" style="justify-content:flex-start; gap:10px;">
-          <button class="btn-primary" id="btn-recheck-saved">♻ Recheck all</button>
-          <button class="btn-ghost" id="btn-remove-dead" disabled>🗑 Remove dead</button>
-          <button class="btn-ghost" id="btn-saved-copy" disabled>Copy</button>
-          <button class="btn-ghost" id="btn-saved-export" disabled>Export</button>
-          <button class="btn-ghost" id="btn-saved-clear" disabled>Clear pool</button>
+          <button class="btn-primary" id="btn-recheck-saved">♻ 重新检测全部</button>
+          <button class="btn-ghost" id="btn-remove-dead" disabled>🗑 删除失效代理</button>
+          <button class="btn-ghost" id="btn-saved-copy" disabled>复制</button>
+          <button class="btn-ghost" id="btn-saved-export" disabled>导出</button>
+          <button class="btn-ghost" id="btn-saved-clear" disabled>清空代理池</button>
           <span class="check-status" id="saved-status"></span>
         </div>
 
         <div class="filter-bar" id="saved-filter-bar">
-          <label class="toggle"><input type="checkbox" id="sf-hide-dead" /> Hide non-working</label>
-          <label class="field-inline">Risk
-            <select id="sf-risk"><option value="">All</option><option>Low</option><option>Medium</option><option>High</option></select>
+          <label class="toggle"><input type="checkbox" id="sf-hide-dead" /> 隐藏不可用代理</label>
+          <label class="field-inline">风险等级
+            <select id="sf-risk"><option value="">全部</option><option value="Low">低</option><option value="Medium">中</option><option value="High">高</option></select>
           </label>
-          <label class="field-inline">Country
-            <select id="sf-country"><option value="">All</option></select>
+          <label class="field-inline">国家/地区
+            <select id="sf-country"><option value="">全部</option></select>
           </label>
-          <label class="field-inline">Max latency (ms)
-            <input id="sf-latency" type="number" min="0" step="500" placeholder="any" />
+          <label class="field-inline">最大延迟（毫秒）
+            <input id="sf-latency" type="number" min="0" step="500" placeholder="不限" />
           </label>
-          <label class="field-inline">Min quality (%)
-            <input id="sf-quality" type="number" min="0" max="100" step="5" placeholder="any" />
+          <label class="field-inline">最低质量（%）
+            <input id="sf-quality" type="number" min="0" max="100" step="5" placeholder="不限" />
           </label>
           <span class="filter-count" id="saved-filter-count"></span>
         </div>
 
         <div class="results-cols">
-          <span></span><span>Proxy</span><span>Status</span><span>Country</span>
-          <span>Resolved IP</span><span>Quality</span><span>Risk</span><span>Latency</span>
+          <span></span><span>代理地址</span><span>状态</span><span>国家/地区</span>
+          <span>出口 IP</span><span>质量</span><span>风险</span><span>延迟</span>
         </div>
         <div class="results-list big" id="saved-list"></div>
       </main>
