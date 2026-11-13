@@ -1,6 +1,8 @@
 name: 中文版构建验证
 
 on:
+  push:
+    branches: [chinese-localization]
   pull_request:
     branches: [main]
   workflow_dispatch:
