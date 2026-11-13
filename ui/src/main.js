@@ -482,7 +482,12 @@ function translateError(value) {
     ["write failed", "导出文件写入失败"],
     ["Error sending message", "向检测引擎发送数据失败"],
     ["engine task join error", "检测任务异常中断"],
-    ["unknown message type", "检测引擎返回了无法识别的消息"]
+    ["unknown message type", "检测引擎返回了无法识别的消息"],
+    ["Failed to resolve PulseEngine", "无法定位代理检测引擎"],
+    ["cannot determine Chrome NM directory", "无法定位 Chrome 原生消息目录"],
+    ["cannot determine Firefox NM directory", "无法定位 Firefox 原生消息目录"],
+    ["create dir", "无法创建浏览器集成目录"],
+    ["write manifest", "无法写入浏览器集成配置"]
   ];
   for (const [key, label] of messages) {
     if (text.toLowerCase().includes(key.toLowerCase())) return label;
