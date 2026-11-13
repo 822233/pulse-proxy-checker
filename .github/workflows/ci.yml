@@ -1,0 +1,43 @@
+name: 中文版构建验证
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  windows-check:
+    runs-on: windows-latest
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: 配置 Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 安装并检查代理检测引擎
+        working-directory: host
+        shell: pwsh
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { npm install }
+          node --check src/host.js
+          node --check src/cli.js
+          npx -y pkg@5.8.1 . --targets node18-win-x64 --output dist/PulseEngine.exe
+
+      - name: 安装并构建中文界面
+        working-directory: ui
+        shell: pwsh
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { npm install }
+          npm run build
+
+      - name: Rust 单元测试
+        working-directory: src-tauri
+        run: cargo test
