@@ -157,14 +157,17 @@ npm run pkg
 
 | 来源 | 支持协议 | 许可或说明 |
 |---|---|---|
+| maximilianfeix/free-proxy-list | HTTP、SOCKS4、SOCKS5 | 每小时复测；按实测速度排序；MIT |
+| litportnet/free-proxy-list | HTTP、SOCKS4、SOCKS5 | 约每 5 分钟更新；数据 CC0，代码 MIT |
+| proxmint/free-proxy-list | SOCKS4、SOCKS5 | 每 30 分钟复测；数据 CC BY 4.0，需保留署名 |
 | TheSpeedX | HTTP、SOCKS4、SOCKS5 | 上游公开列表 |
 | monosans | HTTP、SOCKS4、SOCKS5 | MIT |
 | Proxifly | HTTP、SOCKS5 | GPLv3 |
 | ProxyScrape | HTTP、SOCKS4、SOCKS5 | 免费服务条款以官方说明为准 |
-| maximilianfeix/free-proxy-list | HTTP | 上游验证并按速度排序；MIT |
-| litportnet/free-proxy-list | HTTP、SOCKS5 | 定时更新；MIT（数据许可另见上游说明） |
 
-公开代理的在线率、速度和稳定性会随时间变化。列表来源的更新频率或上游验证结果不代表代理在你的网络环境中一定可用。Pulse 会重新进行本机检测，不将上述来源的代理列表作为本项目自有数据打包发布。请遵守各来源的使用条款。
+SOCKS4/SOCKS5 来源已优先加入上游复测并按速度排序的候选列表，再补充高频更新来源和传统公开列表。上游检测环境与本机网络不同，因此列表靠前不代表在你的网络中一定低延迟；Pulse 仍会逐个进行本机实测。免费公共代理本身波动很大，不能保证稳定低延迟。
+
+Proxmint 数据采用 CC BY 4.0，按其要求保留署名：[Proxmint Free Proxy List](https://proxmint.com/free-proxies)（[源项目](https://github.com/proxmint/free-proxy-list)）。Pulse 仅在运行时获取候选地址，不将上游代理数据打包发布。请遵守各来源的使用条款。
 
 ## 隐私说明
 

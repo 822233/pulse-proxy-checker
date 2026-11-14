@@ -41,6 +41,19 @@ const SOURCES = {
     ] },
   ],
   socks4: [
+    // Verified lists are ordered ahead of raw scrapes; upstreams re-check candidates.
+    { name: 'maximilianfeix（每小时验证，速度优先）', urls: [
+      'https://raw.githubusercontent.com/maximilianfeix/free-proxy-list/main/socks4.txt',
+      'https://cdn.jsdelivr.net/gh/maximilianfeix/free-proxy-list@main/socks4.txt',
+    ] },
+    { name: 'Litport（约每 5 分钟更新）', urls: [
+      'https://raw.githubusercontent.com/litportnet/free-proxy-list/live/proxies/socks4.txt',
+      'https://cdn.jsdelivr.net/gh/litportnet/free-proxy-list@live/proxies/socks4.txt',
+    ] },
+    { name: 'Proxmint（每 30 分钟复测）', urls: [
+      'https://raw.githubusercontent.com/proxmint/free-proxy-list/main/proxies/socks4.txt',
+      'https://cdn.jsdelivr.net/gh/proxmint/free-proxy-list@main/proxies/socks4.txt',
+    ] },
     { name: 'TheSpeedX', urls: [
       'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt',
       'https://cdn.jsdelivr.net/gh/TheSpeedX/PROXY-List@master/socks4.txt',
@@ -55,8 +68,18 @@ const SOURCES = {
     ] },
   ],
   socks5: [
-    { name: 'Litport（定时更新）', urls: [
+    // Maximilianfeix sorts by measured response speed; Litport rechecks more frequently.
+    { name: 'maximilianfeix（每小时验证，速度优先）', urls: [
+      'https://raw.githubusercontent.com/maximilianfeix/free-proxy-list/main/socks5.txt',
+      'https://cdn.jsdelivr.net/gh/maximilianfeix/free-proxy-list@main/socks5.txt',
+    ] },
+    { name: 'Litport（约每 5 分钟更新）', urls: [
       'https://raw.githubusercontent.com/litportnet/free-proxy-list/live/proxies/socks5.txt',
+      'https://cdn.jsdelivr.net/gh/litportnet/free-proxy-list@live/proxies/socks5.txt',
+    ] },
+    { name: 'Proxmint（每 30 分钟复测）', urls: [
+      'https://raw.githubusercontent.com/proxmint/free-proxy-list/main/proxies/socks5.txt',
+      'https://cdn.jsdelivr.net/gh/proxmint/free-proxy-list@main/proxies/socks5.txt',
     ] },
     { name: 'TheSpeedX', urls: [
       'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt',
