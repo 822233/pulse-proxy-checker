@@ -17,7 +17,12 @@ assert.deepStrictEqual(parseLines([
   '203.0.113.5:1080',
 ]);
 
-assert.strictEqual(SOURCES.http[0].urls.length, 2);
+assert.strictEqual(SOURCES.http[0].name, 'maximilianfeix（验证列表）');
+assert.match(SOURCES.http[0].urls[0], /maximilianfeix.*http\.txt/);
+assert.match(SOURCES.http[1].urls[0], /litportnet.*http\.txt/);
+assert.strictEqual(SOURCES.socks5[0].name, 'Litport（定时更新）');
+assert.match(SOURCES.socks5[0].urls[0], /litportnet.*socks5\.txt/);
+assert.strictEqual(SOURCES.http[2].urls.length, 2);
 assert.strictEqual(SOURCES.socks5[2].urls.length, 2);
 assert.match(describeError(Object.assign(new Error('lookup failed'), { code: 'ENOTFOUND' })), /DNS/);
 assert.match(describeError(Object.assign(new Error('socket timeout'), { code: 'ETIMEDOUT' })), /超时/);

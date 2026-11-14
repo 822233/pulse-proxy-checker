@@ -224,7 +224,19 @@ const checkerFilterEls = { hideDead: hideDeadToggle, risk: fRisk, country: fCoun
 const passesFilters = (r) => makeFilter(checkerFilterEls)(r);
 
 function filteredResults() {
-  return lastResults.filter(passesFilters);
+  // Keep the fastest working proxies at the top. Dead entries remain at the
+  // bottom when the user disables "hide dead"; original order breaks ties.
+  return lastResults
+    .map((result, index) => ({ result, index }))
+    .filter(({ result }) => passesFilters(result))
+    .sort((a, b) => {
+      if (a.result.ok !== b.result.ok) return a.result.ok ? -1 : 1;
+      if (a.result.ok && b.result.ok) {
+        return (a.result.latencyMs ?? Infinity) - (b.result.latencyMs ?? Infinity) || a.index - b.index;
+      }
+      return a.index - b.index;
+    })
+    .map(({ result }) => result);
 }
 
 function rerenderResults() {
@@ -468,7 +480,9 @@ function buildRow(r) {
   const exit = r.ok && r.exitIp ? r.exitIp : "";
   const quality = r.ok && r.quality != null ? `${r.quality}%` : "";
   const risk = r.ok && r.risk ? ({ Low: "低", Medium: "中", High: "高" }[r.risk] || r.risk) : "";
-  const latency = r.ok && r.latencyMs != null ? `${r.latencyMs} ms` : "";
+  const latency = r.ok && r.latencyMs != null
+    ? `${r.latencyMs} ms · ${r.latencyMs < 500 ? "快速" : r.latencyMs < 1000 ? "较快" : r.latencyMs < 2000 ? "一般" : "较慢"}`
+    : "";
   const riskClass = risk ? `risk-${risk.toLowerCase()}` : "";
   row.innerHTML = `
     <span class="dot" title="${escapeHtml(r.isp || "")}"></span>

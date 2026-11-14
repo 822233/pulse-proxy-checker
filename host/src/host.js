@@ -30,16 +30,6 @@ process.on('unhandledRejection', (err) => {
   logToFile('unhandledRejection (ignored)', err && (err.message || String(err)));
 });
 
-/** Fisher-Yates shuffle (returns a new array). */
-function shuffle(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 function startNativeMessagingHost() {
   logToFile('host started (native messaging mode)');
 
@@ -80,10 +70,11 @@ function startNativeMessagingHost() {
       const options = msg.options || {};
       const { proxies: all, perSource, sourceDetails, dnsServers } = await fetchFreeProxies(msg.protocol);
 
-      // limit <= 0 (or missing) means "check all". Otherwise sample `limit` at
-      // random (shuffled so we span sources, not always the same head).
+      // Source order is intentional: curated, recently verified lists are
+      // placed first and are speed-sorted upstream. Preserve that order when
+      // the user limits a run instead of randomly discarding the best entries.
       const limit = options.limit && options.limit > 0 ? options.limit : 0;
-      const proxies = limit > 0 ? shuffle(all).slice(0, limit) : all;
+      const proxies = limit > 0 ? all.slice(0, limit) : all;
       send(process.stdout, { type: 'fetch-free-result', id, proxies, perSource, sourceDetails, dnsServers, fetched: all.length, checking: proxies.length });
 
       const results = await checkProxies(proxies, options, (result, done, total) => {

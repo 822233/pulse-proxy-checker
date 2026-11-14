@@ -15,6 +15,14 @@ const { logToFile } = require('./logger');
 
 const SOURCES = {
   http: [
+    // These projects publish recently revalidated lists; keep their fast-first
+    // ordering ahead of broad raw lists so limited checks favor better candidates.
+    { name: 'maximilianfeix（验证列表）', urls: [
+      'https://raw.githubusercontent.com/maximilianfeix/free-proxy-list/main/http.txt',
+    ] },
+    { name: 'Litport（定时更新）', urls: [
+      'https://raw.githubusercontent.com/litportnet/free-proxy-list/live/proxies/http.txt',
+    ] },
     { name: 'TheSpeedX', urls: [
       'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt',
       'https://cdn.jsdelivr.net/gh/TheSpeedX/PROXY-List@master/http.txt',
@@ -47,6 +55,9 @@ const SOURCES = {
     ] },
   ],
   socks5: [
+    { name: 'Litport（定时更新）', urls: [
+      'https://raw.githubusercontent.com/litportnet/free-proxy-list/live/proxies/socks5.txt',
+    ] },
     { name: 'TheSpeedX', urls: [
       'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt',
       'https://cdn.jsdelivr.net/gh/TheSpeedX/PROXY-List@master/socks5.txt',
