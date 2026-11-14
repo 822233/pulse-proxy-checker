@@ -1,0 +1,127 @@
+name: 中文版构建验证（仅免安装版）
+
+on:
+  push:
+    branches: [chinese-localization, main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  windows-portable:
+    runs-on: windows-latest
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: 配置 Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 安装并测试代理检测引擎
+        working-directory: host
+        shell: bash
+        run: |
+          npm ci
+          node --check src/host.js
+          node --check src/sources.js
+          node --test src/sources.test.js
+          npx -y pkg@5.8.1 . --targets node18-win-x64 --output dist/PulseEngine.exe
+
+      - name: 暂存引擎资源
+        shell: bash
+        run: |
+          mkdir -p src-tauri/assets
+          cp host/dist/PulseEngine.exe src-tauri/assets/PulseEngine.exe
+
+      - name: 安装并构建中文界面
+        working-directory: ui
+        shell: bash
+        run: |
+          npm ci
+          npm run build
+
+      - name: Rust 单元测试
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: 安装 Tauri CLI
+        run: cargo install tauri-cli --locked
+
+      - name: 仅构建 Windows 可执行文件（跳过安装包）
+        run: cargo tauri build --no-bundle
+
+      - name: 组装并检查免安装版
+        shell: pwsh
+        run: |
+          $portable = Join-Path $PWD "Pulse-中文版-Windows-Portable"
+          New-Item -ItemType Directory -Force -Path $portable | Out-Null
+          New-Item -ItemType Directory -Force -Path (Join-Path $portable "assets") | Out-Null
+
+          $appExe = "src-tauri/target/release/Pulse.exe"
+          $engineExe = "src-tauri/assets/PulseEngine.exe"
+          if (-not (Test-Path $appExe)) { throw "缺少 Pulse.exe：$appExe" }
+          if (-not (Test-Path $engineExe)) { throw "缺少 PulseEngine.exe：$engineExe" }
+
+          Copy-Item $appExe (Join-Path $portable "Pulse.exe")
+          Copy-Item $engineExe (Join-Path $portable "assets/PulseEngine.exe")
+
+          if (-not (Test-Path (Join-Path $portable "assets/PulseEngine.exe"))) {
+            throw "免安装版缺少引擎文件"
+          }
+          $unexpected = Get-ChildItem $portable -Recurse -File |
+            Where-Object { $_.Name -match '^(uninstall\.exe|.*setup.*\.exe)$' }
+          if ($unexpected) { throw "免安装目录中出现安装程序文件" }
+
+          Get-ChildItem $portable -Recurse -File | Select-Object FullName,Length
+          Compress-Archive -Path (Join-Path $portable "*") -DestinationPath "Pulse-中文版-Windows-Portable.zip" -Force
+
+      - name: 上传 Windows 免安装版（唯一构建产物）
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pulse-中文版-Windows-Portable
+          path: Pulse-中文版-Windows-Portable.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: windows-portable
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出版本配置
+        uses: actions/checkout@v4
+
+      - name: 下载本次构建的免安装 ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: Pulse-中文版-Windows-Portable
+          path: release-assets
+          run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: 根据项目版本创建或更新 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          TAG="v${VERSION}"
+          ASSET="release-assets/Pulse-中文版-Windows-Portable.zip"
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "${ASSET}" --repo "${GITHUB_REPOSITORY}" --clobber
+          else
+            gh release create "${TAG}" "${ASSET}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --target "${GITHUB_SHA}" \
+              --title "Pulse 中文版 ${TAG}" \
+              --notes "Windows 免安装版。下载 ZIP 后解压，运行 Pulse.exe 即可。请保持 assets/PulseEngine.exe 相对目录结构。"
+          fi

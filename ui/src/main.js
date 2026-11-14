@@ -46,6 +46,7 @@ const findAliveBtn = $("btn-find-alive");
 
 let checkRunning = false;
 let cancelled = false;
+let lastFetchSummary = null;
 
 // Normalize a raw proxy string to its host:port identity (for dedup).
 function proxyKey(raw) {
@@ -84,7 +85,7 @@ function selectMode(newMode) {
   } else {
     showView("input");
     freeBar.hidden = mode !== "free";
-    pageTitle.textContent = mode === "free" ? "Free Proxy Finder" : "Paste Your Proxies";
+    pageTitle.textContent = mode === "free" ? "免费代理获取" : "粘贴代理列表";
   }
 }
 document.querySelectorAll(".mode-tabs").forEach((row) =>
@@ -128,16 +129,17 @@ findAliveBtn.addEventListener("click", async () => {
   findAliveBtn.disabled = true;
   cancelled = false;
   checkRunning = true;
+  lastFetchSummary = null;
   beginResults();
-  checkTitle.textContent = "Finding alive proxies…";
+  checkTitle.textContent = "正在获取并检测可用代理…";
   checkStatus.classList.add("busy");
-  checkStatus.textContent = `Fetching ${selectedScheme.toUpperCase()} proxies from public lists…`;
+  checkStatus.textContent = `正在从公开列表获取 ${selectedScheme.toUpperCase()} 代理…`;
   try {
     const conc = Math.min(300, Math.max(10, parseInt($("concurrency").value, 10) || 100));
     await invoke("find_alive_proxies", { protocol: selectedScheme, options: collectOptions({ limit: 0, concurrency: conc }) });
     finishCheck();
   } catch (err) {
-    if (!cancelled) checkStatus.textContent = "Find Alive failed: " + err;
+    if (!cancelled) checkStatus.textContent = "获取代理失败：" + translateError(err);
   } finally {
     checkRunning = false;
     findAliveBtn.disabled = false;
@@ -147,18 +149,39 @@ findAliveBtn.addEventListener("click", async () => {
 
 listen("free-fetched", (event) => {
   const p = event.payload || {};
-  const fetched = p.fetched || (p.proxies ? p.proxies.length : 0);
-  const checking = p.checking || (p.proxies ? p.proxies.length : 0);
-  checkStatus.textContent = `Fetched ${fetched} — checking ${checking}…`;
+  const fetched = Number.isFinite(p.fetched) ? p.fetched : (p.proxies ? p.proxies.length : 0);
+  const checking = Number.isFinite(p.checking) ? p.checking : (p.proxies ? p.proxies.length : 0);
+  const details = Object.entries(p.sourceDetails || {}).map(([name, item]) =>
+    item.ok
+      ? `${name}：成功 ${item.count} 个`
+      : `${name}：失败（${item.error || "未知错误"}）`
+  );
+  const dnsInfo = Array.isArray(p.dnsServers) && p.dnsServers.length
+    ? `系统 DNS：${p.dnsServers.join(", ")}`
+    : "系统 DNS：未能读取";
+  lastFetchSummary = { fetched, checking, details, dnsInfo };
+  checkStatus.textContent = fetched > 0
+    ? `已获取 ${fetched} 个，正在检测 ${checking} 个…`
+    : `代理列表获取失败：${details.join("；") || "所有来源均未返回数据"}；${dnsInfo}`;
 });
 
 function finishCheck() {
   if (cancelled) return;
   const alive = liveWorking;
   const total = lastResults.length;
-  checkTitle.textContent = `${alive} working / ${total} checked`;
+  checkTitle.textContent = lastFetchSummary && lastFetchSummary.fetched === 0
+    ? "代理列表获取失败"
+    : `${alive} 个可用 / 共检测 ${total} 个`;
   checkStatus.classList.remove("busy");
-  checkStatus.textContent = alive > 0 ? `Found ${alive} working proxies.` : "No working proxies found.";
+  if (lastFetchSummary && lastFetchSummary.fetched === 0) {
+    checkStatus.textContent = `没有获取到代理列表。详细原因：${lastFetchSummary.details.join("；") || "所有来源均未返回数据"}；${lastFetchSummary.dnsInfo}`;
+  } else if (alive > 0) {
+    checkStatus.textContent = `检测完成：发现 ${alive} 个可用代理。`;
+  } else if (lastFetchSummary) {
+    checkStatus.textContent = `已获取 ${lastFetchSummary.fetched} 个代理，但没有检测到可用代理。`;
+  } else {
+    checkStatus.textContent = "没有发现可用代理。";
+  }
   updateActionButtons();
   populateCountryFilter();
   rerenderResults();
@@ -168,7 +191,7 @@ function finishCheck() {
 const fRisk = $("f-risk"), fCountry = $("f-country"), fLatency = $("f-latency"), fQuality = $("f-quality"), filterCount = $("filter-count");
 
 function resetFilters() {
-  fRisk.value = ""; fCountry.innerHTML = '<option value="">All</option>';
+  fRisk.value = ""; fCountry.innerHTML = '<option value="">全部</option>';
   fLatency.value = ""; fQuality.value = ""; hideDeadToggle.checked = true;
 }
 
@@ -176,7 +199,7 @@ function populateCountryFilter() {
   const seen = new Map();
   for (const r of lastResults) if (r.ok && r.countryCode) seen.set(r.countryCode, r.countryCode);
   const cur = fCountry.value;
-  fCountry.innerHTML = '<option value="">All</option>' +
+  fCountry.innerHTML = '<option value="">全部</option>' +
     [...seen.entries()].sort().map(([cc, label]) => `<option value="${cc}">${label}</option>`).join("");
   fCountry.value = cur;
 }
@@ -204,14 +227,28 @@ function filteredResults() {
   return lastResults.filter(passesFilters);
 }
 
+// Sort only when rendering or exporting, never during every progress update.
+function sortByLatency(rows) {
+  return rows
+    .map((result, index) => ({ result, index }))
+    .sort((a, b) => {
+      if (a.result.ok !== b.result.ok) return a.result.ok ? -1 : 1;
+      if (a.result.ok && b.result.ok) {
+        return (a.result.latencyMs ?? Infinity) - (b.result.latencyMs ?? Infinity) || a.index - b.index;
+      }
+      return a.index - b.index;
+    })
+    .map(({ result }) => result);
+}
+
 function rerenderResults() {
   resultsList.innerHTML = "";
-  const rows = filteredResults();
+  const rows = sortByLatency(filteredResults());
   const frag = document.createDocumentFragment();
   for (const r of rows.slice(0, 1000)) frag.appendChild(buildRow(r));
   resultsList.appendChild(frag);
   const workingShown = rows.filter((r) => r.ok).length;
-  filterCount.textContent = `${workingShown} shown`;
+  filterCount.textContent = `显示 ${workingShown} 个`;
   updateActionButtons();
 }
 
@@ -238,7 +275,7 @@ function updateActionButtons() {
 // ============================ copy / export / save ============================
 // These act on the FILTERED working set so "save/copy/export filtered" is implicit.
 function visibleWorking() {
-  return filteredResults().filter((r) => r.ok);
+  return sortByLatency(filteredResults().filter((r) => r.ok));
 }
 
 async function copyToClipboard(text, btn, label) {
@@ -249,22 +286,22 @@ async function copyToClipboard(text, btn, label) {
     ta.value = text; document.body.appendChild(ta); ta.select();
     document.execCommand("copy"); ta.remove();
   }
-  const old = btn.textContent; btn.textContent = "✓ Copied";
+  const old = btn.textContent; btn.textContent = "✓ 已复制";
   setTimeout(() => (btn.textContent = old || label), 1200);
 }
 
-copyBtn.addEventListener("click", () => copyToClipboard(visibleWorking().map((r) => r.raw).join("\n"), copyBtn, "Copy"));
+copyBtn.addEventListener("click", () => copyToClipboard(visibleWorking().map((r) => r.raw).join("\n"), copyBtn, "复制"));
 
 async function exportToFile(content, filename, btn) {
   try {
     const path = await invoke("export_proxies", { filename, content });
     const old = btn.textContent;
-    btn.textContent = "✓ Saved to Downloads";
+    btn.textContent = "✓ 已保存到下载文件夹";
     setTimeout(() => (btn.textContent = old), 1800);
     console.log("exported to", path);
   } catch (e) {
-    btn.textContent = "Export failed";
-    setTimeout(() => (btn.textContent = "Export"), 1800);
+    btn.textContent = "导出失败";
+    setTimeout(() => (btn.textContent = "导出"), 1800);
   }
 }
 
@@ -300,7 +337,7 @@ async function saveToPools(toSave, btn) {
     added += await mergeIntoPool(proto, items);
   }
   const old = btn.textContent;
-  btn.textContent = `✓ Saved ${added}`;
+  btn.textContent = `✓ 已保存 ${added} 个`;
   setTimeout(() => (btn.textContent = old), 1500);
 }
 
@@ -342,7 +379,7 @@ $("protocol-group").addEventListener("click", (e) => {
   $("protocol-group").querySelectorAll(".pill").forEach((p) => p.classList.remove("active"));
   pill.classList.add("active");
   selectedScheme = pill.dataset.scheme;
-  if (!freeBar.hidden) freeStatus.textContent = `Will pull ${selectedScheme.toUpperCase()} proxies from public lists.`;
+  if (!freeBar.hidden) freeStatus.textContent = `将从公开列表获取 ${selectedScheme.toUpperCase()} 代理。`;
 });
 
 clearBtn.addEventListener("click", () => { input.value = ""; refreshCount(); });
@@ -361,22 +398,22 @@ checkBtn.addEventListener("click", async () => {
   const list = applyScheme(lines());
   if (list.length === 0) return;
   checkBtn.disabled = true;
-  checkBtn.textContent = "Checking…";
+  checkBtn.textContent = "正在检测…";
   cancelled = false;
   checkRunning = true;
   beginResults();
-  checkTitle.textContent = "Checking proxies…";
+  checkTitle.textContent = "正在检测代理…";
   checkStatus.classList.add("busy");
-  checkStatus.textContent = `Checking ${list.length} proxies…`;
+  checkStatus.textContent = `正在检测 ${list.length} 个代理…`;
   try {
     await invoke("check_proxies_native", { proxies: list, options: collectOptions() });
     finishCheck();
   } catch (err) {
-    if (!cancelled) checkStatus.textContent = "Check failed: " + err;
+    if (!cancelled) checkStatus.textContent = "检测失败：" + translateError(err);
   } finally {
     checkRunning = false;
     checkBtn.disabled = false;
-    checkBtn.textContent = "Check Proxies";
+    checkBtn.textContent = "开始检测";
     checkStatus.classList.remove("busy");
   }
 });
@@ -406,7 +443,7 @@ function flushProgress() {
   setStats(total || done, liveWorking, liveDead);
   updateActionButtons();
   if (checkStatus.classList.contains("busy") && done) {
-    checkStatus.textContent = `Checking ${done}/${total} — ${liveWorking} working, ${liveDead} dead`;
+    checkStatus.textContent = `检测进度 ${done}/${total} — ${liveWorking} 个可用，${liveDead} 个失效`;
   }
 }
 
@@ -439,13 +476,15 @@ function setStats(total, working, dead) {
 function buildRow(r) {
   const row = document.createElement("div");
   row.className = "result-row " + (r.ok ? "ok" : "dead");
-  const status = r.ok ? "Success" : (r.error || "Failed");
+  const status = r.ok ? "可用" : translateError(r.error || "Failed");
   // flag is trusted markup (built from a validated 2-letter code); code is escaped.
   const country = r.ok ? `${flagHtml(r.countryCode)} ${escapeHtml(r.countryCode || "??")}` : "";
   const exit = r.ok && r.exitIp ? r.exitIp : "";
   const quality = r.ok && r.quality != null ? `${r.quality}%` : "";
-  const risk = r.ok && r.risk ? r.risk : "";
-  const latency = r.ok && r.latencyMs != null ? `${r.latencyMs} ms` : "";
+  const risk = r.ok && r.risk ? ({ Low: "低", Medium: "中", High: "高" }[r.risk] || r.risk) : "";
+  const latency = r.ok && r.latencyMs != null
+    ? `${r.latencyMs} ms · ${r.latencyMs < 500 ? "快速" : r.latencyMs < 1000 ? "较快" : r.latencyMs < 2000 ? "一般" : "较慢"}`
+    : "";
   const riskClass = risk ? `risk-${risk.toLowerCase()}` : "";
   row.innerHTML = `
     <span class="dot" title="${escapeHtml(r.isp || "")}"></span>
@@ -457,6 +496,43 @@ function buildRow(r) {
     <span class="col-risk ${riskClass}">${escapeHtml(risk)}</span>
     <span class="col-latency meta">${escapeHtml(latency)}</span>`;
   return row;
+}
+
+function translateError(value) {
+  const text = String(value || "").trim();
+  const messages = [
+    ["parse error", "代理地址格式无法识别"],
+    ["not forwarding", "代理未正确转发请求"],
+    ["ECONNREFUSED", "代理服务器拒绝连接"],
+    ["ECONNRESET", "连接被对端重置"],
+    ["ENOTFOUND", "域名解析失败"],
+    ["EHOSTUNREACH", "目标主机不可达"],
+    ["ENETUNREACH", "网络不可达"],
+    ["ETIMEDOUT", "连接超时"],
+    ["timeout", "连接超时"],
+    ["no response", "未收到响应"],
+    ["Failed to spawn engine", "检测引擎启动失败"],
+    ["resource dir", "无法定位程序资源目录"],
+    ["app data dir", "无法访问应用数据目录"],
+    ["create saved dir", "无法创建代理池目录"],
+    ["serialize", "代理池数据处理失败"],
+    ["write saved", "代理池保存失败"],
+    ["could not resolve a download directory", "无法定位下载目录"],
+    ["write failed", "导出文件写入失败"],
+    ["Error sending message", "向检测引擎发送数据失败"],
+    ["engine task join error", "检测任务异常中断"],
+    ["unknown message type", "检测引擎返回了无法识别的消息"],
+    ["Failed to resolve PulseEngine", "无法定位代理检测引擎"],
+    ["cannot determine Chrome NM directory", "无法定位 Chrome 原生消息目录"],
+    ["cannot determine Firefox NM directory", "无法定位 Firefox 原生消息目录"],
+    ["create dir", "无法创建浏览器集成目录"],
+    ["write manifest", "无法写入浏览器集成配置"]
+  ];
+  for (const [key, label] of messages) {
+    if (text.toLowerCase().includes(key.toLowerCase())) return label;
+  }
+  if (!text || text.toLowerCase() === "failed") return "操作失败，请重试";
+  return text;
 }
 
 function escapeHtml(s) {
@@ -486,11 +562,11 @@ savedProtoGroup.addEventListener("click", (e) => {
 });
 
 async function loadSavedPool() {
-  savedStatus.textContent = "Loading…";
+  savedStatus.textContent = "正在加载…";
   const data = await invoke("load_saved", { protocol: savedScheme });
   savedPool = Array.isArray(data) ? data : [];
   renderSavedPool();
-  savedStatus.textContent = `${savedPool.length} saved ${savedScheme.toUpperCase()} proxies`;
+  savedStatus.textContent = `已保存 ${savedPool.length} 个 ${savedScheme.toUpperCase()} 代理`;
 }
 
 // Saved-view filters (independent from the checker view).
@@ -506,7 +582,7 @@ function populateSavedCountryFilter() {
   const seen = new Map();
   for (const r of savedPool) if (r.ok && r.countryCode) seen.set(r.countryCode, r.countryCode);
   const cur = savedFilterEls.country.value;
-  savedFilterEls.country.innerHTML = '<option value="">All</option>' +
+  savedFilterEls.country.innerHTML = '<option value="">全部</option>' +
     [...seen.entries()].sort().map(([cc, label]) => `<option value="${cc}">${label}</option>`).join("");
   savedFilterEls.country.value = cur;
 }
@@ -514,11 +590,11 @@ function populateSavedCountryFilter() {
 function renderSavedPool() {
   populateSavedCountryFilter();
   savedList.innerHTML = "";
-  const rows = savedPool.filter(passesSavedFilter);
+  const rows = sortByLatency(savedPool.filter(passesSavedFilter));
   const frag = document.createDocumentFragment();
   for (const r of rows.slice(0, 2000)) frag.appendChild(buildRow(r));
   savedList.appendChild(frag);
-  savedFilterCount.textContent = `${rows.filter((r) => r.ok).length} shown`;
+  savedFilterCount.textContent = `显示 ${rows.filter((r) => r.ok).length} 个`;
   const hasDead = savedPool.some((r) => !r.ok);
   removeDeadBtn.disabled = !hasDead;
   savedCopyBtn.disabled = savedPool.length === 0;
@@ -528,9 +604,9 @@ function renderSavedPool() {
 
 // Recheck every proxy in the pool, updating rows live, then persist.
 recheckBtn.addEventListener("click", async () => {
-  if (savedPool.length === 0) { savedStatus.textContent = "Pool is empty."; return; }
+  if (savedPool.length === 0) { savedStatus.textContent = "代理池为空。"; return; }
   recheckBtn.disabled = true;
-  savedStatus.textContent = `Rechecking ${savedPool.length}…`;
+  savedStatus.textContent = `正在重新检测 ${savedPool.length} 个代理…`;
   const raws = savedPool.map((r) => r.raw);
   savedRecheckActive = true;
   savedRecheckMap = new Map(); // key -> new result
@@ -541,9 +617,9 @@ recheckBtn.addEventListener("click", async () => {
     await invoke("save_saved", { protocol: savedScheme, proxies: savedPool });
     renderSavedPool();
     const alive = savedPool.filter((r) => r.ok).length;
-    savedStatus.textContent = `Rechecked — ${alive}/${savedPool.length} still working`;
+    savedStatus.textContent = `重新检测完成 — ${alive}/${savedPool.length} 个仍然可用`;
   } catch (err) {
-    savedStatus.textContent = "Recheck failed: " + err;
+    savedStatus.textContent = "重新检测失败：" + translateError(err);
   } finally {
     savedRecheckActive = false;
     recheckBtn.disabled = false;
@@ -558,18 +634,18 @@ listen("proxy-progress", (event) => {
   const { result, done, total } = event.payload;
   savedRecheckMap.set(proxyKey(result.raw), result);
   const alive = [...savedRecheckMap.values()].filter((r) => r.ok).length;
-  savedStatus.textContent = `Rechecking ${done}/${total} — ${alive} still working`;
+  savedStatus.textContent = `重新检测进度 ${done}/${total} — ${alive} 个仍然可用`;
 });
 
 removeDeadBtn.addEventListener("click", async () => {
   savedPool = savedPool.filter((r) => r.ok);
   await invoke("save_saved", { protocol: savedScheme, proxies: savedPool });
   renderSavedPool();
-  savedStatus.textContent = `Removed dead — ${savedPool.length} remain`;
+  savedStatus.textContent = `已删除失效代理，剩余 ${savedPool.length} 个`;
 });
 
 const savedVisibleWorking = () => savedPool.filter((r) => r.ok && passesSavedFilter(r));
-savedCopyBtn.addEventListener("click", () => copyToClipboard(savedVisibleWorking().map((r) => r.raw).join("\n"), savedCopyBtn, "Copy"));
+savedCopyBtn.addEventListener("click", () => copyToClipboard(savedVisibleWorking().map((r) => r.raw).join("\n"), savedCopyBtn, "复制"));
 savedExportBtn.addEventListener("click", () =>
   exportToFile(savedVisibleWorking().map((r) => r.raw).join("\n"), `proxies-${savedScheme}-${stamp()}.txt`, savedExportBtn)
 );
@@ -577,7 +653,7 @@ savedClearBtn.addEventListener("click", async () => {
   savedPool = [];
   await invoke("save_saved", { protocol: savedScheme, proxies: [] });
   renderSavedPool();
-  savedStatus.textContent = "Pool cleared.";
+  savedStatus.textContent = "代理池已清空。";
 });
 
 refreshCount();
@@ -588,7 +664,7 @@ refreshCount();
   const text = $("update-text");
   const download = $("update-download");
   const dismiss = $("update-dismiss");
-  let updateUrl = "https://github.com/lewispour/pulse-proxy-checker/releases/latest";
+  let updateUrl = "https://github.com/822233/pulse-proxy-checker/releases/latest";
 
   dismiss.addEventListener("click", () => { banner.hidden = true; });
   download.addEventListener("click", async (e) => {
@@ -600,7 +676,7 @@ refreshCount();
     const info = await invoke("check_for_update");
     if (info && info.update) {
       updateUrl = info.url || updateUrl;
-      text.textContent = `Pulse ${info.latest} is available (you have ${info.current}).`;
+      text.textContent = `Pulse 有新版本 ${info.latest} 可用（当前版本 ${info.current}）。`;
       banner.hidden = false;
     }
   } catch {
