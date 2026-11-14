@@ -6,6 +6,8 @@
  */
 
 const fetch = require('node-fetch');
+const dns = require('dns');
+const https = require('https');
 const { execFileSync } = require('child_process');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const { SocksProxyAgent } = require('socks-proxy-agent');
@@ -71,6 +73,42 @@ let cachedProxyAgent;
 let proxyAgentResolved = false;
 
 /**
+ * Use the operating system resolver (same DNS path as other native apps),
+ * but prefer IPv4 when both A and AAAA records exist. This avoids long
+ * IPv6 connection stalls on networks where IPv6 DNS works but IPv6 routing
+ * does not. It does NOT select a public DNS server or bypass router DNS.
+ */
+function createIPv4FirstLookup(lookup = dns.lookup) {
+  return function lookupIPv4First(hostname, options, callback) {
+    if (typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+    const opts = typeof options === 'number' ? { family: options } : (options || {});
+    if (opts.family === 4 || opts.family === 6) {
+      return lookup(hostname, options, callback);
+    }
+    lookup(hostname, {
+      all: true,
+      verbatim: true,
+      hints: opts.hints || 0,
+    }, (err, addresses) => {
+      if (err) return callback(err);
+      const ordered = addresses.slice().sort((a, b) => a.family - b.family);
+      if (ordered.length === 0) {
+        const empty = new Error('DNS lookup returned no addresses');
+        empty.code = 'ENOTFOUND';
+        return callback(empty);
+      }
+      if (opts.all) return callback(null, ordered);
+      return callback(null, ordered[0].address, ordered[0].family);
+    });
+  };
+}
+
+const systemLookup = createIPv4FirstLookup();
+
+/**
  * Resolve a proxy from environment variables or Windows Internet Settings.
  * node-fetch does not automatically inherit the browser's Windows proxy.
  */
@@ -120,9 +158,9 @@ function getProxyAgent() {
   const proxyUrl = getSystemProxyUrl();
   if (!proxyUrl) return null;
   try {
-    if (/^socks4a?:\/\//i.test(proxyUrl)) cachedProxyAgent = new SocksProxyAgent(proxyUrl);
-    else if (/^socks5h?:\/\//i.test(proxyUrl)) cachedProxyAgent = new SocksProxyAgent(proxyUrl);
-    else cachedProxyAgent = new HttpsProxyAgent(proxyUrl);
+    if (/^socks4a?:\/\//i.test(proxyUrl)) cachedProxyAgent = new SocksProxyAgent(proxyUrl, { lookup: systemLookup });
+    else if (/^socks5h?:\/\//i.test(proxyUrl)) cachedProxyAgent = new SocksProxyAgent(proxyUrl, { lookup: systemLookup });
+    else cachedProxyAgent = new HttpsProxyAgent(proxyUrl, { lookup: systemLookup });
     logToFile('using system proxy', proxyUrl.replace(/\/\/[^/@]+:[^/@]+@/, '//***:***@'));
   } catch (err) {
     logToFile('invalid system proxy', err && err.message);
@@ -166,7 +204,10 @@ function parseLines(text) {
 /** Fetch one source with CDN/API fallback; retain a useful diagnostic on failure. */
 async function fetchSource(src) {
   const attempts = [];
-  const agent = getProxyAgent();
+  const configuredProxyAgent = getProxyAgent();
+  // node-fetch v2 does not provide browser-style Happy Eyeballs. Prefer the
+  // system-resolved IPv4 address to avoid waiting on broken IPv6 routes.
+  const agent = configuredProxyAgent || new https.Agent({ keepAlive: true, lookup: systemLookup });
   for (const url of (src.urls || [src.url]).filter(Boolean)) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
@@ -235,4 +276,4 @@ async function fetchFreeProxies(protocol) {
   return { proxies, perSource, sourceDetails, protocol: proto };
 }
 
-module.exports = { fetchFreeProxies, parseLines, SOURCES, getSystemProxyUrl, describeError };
+module.exports = { fetchFreeProxies, parseLines, SOURCES, getSystemProxyUrl, describeError, createIPv4FirstLookup };
