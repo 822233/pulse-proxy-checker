@@ -224,11 +224,13 @@ const checkerFilterEls = { hideDead: hideDeadToggle, risk: fRisk, country: fCoun
 const passesFilters = (r) => makeFilter(checkerFilterEls)(r);
 
 function filteredResults() {
-  // Keep the fastest working proxies at the top. Dead entries remain at the
-  // bottom when the user disables "hide dead"; original order breaks ties.
-  return lastResults
+  return lastResults.filter(passesFilters);
+}
+
+// Sort only when rendering or exporting, never during every progress update.
+function sortByLatency(rows) {
+  return rows
     .map((result, index) => ({ result, index }))
-    .filter(({ result }) => passesFilters(result))
     .sort((a, b) => {
       if (a.result.ok !== b.result.ok) return a.result.ok ? -1 : 1;
       if (a.result.ok && b.result.ok) {
@@ -241,7 +243,7 @@ function filteredResults() {
 
 function rerenderResults() {
   resultsList.innerHTML = "";
-  const rows = filteredResults();
+  const rows = sortByLatency(filteredResults());
   const frag = document.createDocumentFragment();
   for (const r of rows.slice(0, 1000)) frag.appendChild(buildRow(r));
   resultsList.appendChild(frag);
@@ -273,7 +275,7 @@ function updateActionButtons() {
 // ============================ copy / export / save ============================
 // These act on the FILTERED working set so "save/copy/export filtered" is implicit.
 function visibleWorking() {
-  return filteredResults().filter((r) => r.ok);
+  return sortByLatency(filteredResults().filter((r) => r.ok));
 }
 
 async function copyToClipboard(text, btn, label) {
@@ -588,7 +590,7 @@ function populateSavedCountryFilter() {
 function renderSavedPool() {
   populateSavedCountryFilter();
   savedList.innerHTML = "";
-  const rows = savedPool.filter(passesSavedFilter);
+  const rows = sortByLatency(savedPool.filter(passesSavedFilter));
   const frag = document.createDocumentFragment();
   for (const r of rows.slice(0, 2000)) frag.appendChild(buildRow(r));
   savedList.appendChild(frag);
