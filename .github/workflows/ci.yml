@@ -62,7 +62,7 @@ jobs:
       - name: 组装并检查免安装版
         shell: pwsh
         run: |
-          $portable = Join-Path $PWD "Pulse-中文版-Windows-Portable"
+          $portable = Join-Path $PWD "Pulse-Windows-Portable"
           New-Item -ItemType Directory -Force -Path $portable | Out-Null
           New-Item -ItemType Directory -Force -Path (Join-Path $portable "assets") | Out-Null
 
@@ -82,13 +82,13 @@ jobs:
           if ($unexpected) { throw "免安装目录中出现安装程序文件" }
 
           Get-ChildItem $portable -Recurse -File | Select-Object FullName,Length
-          Compress-Archive -Path (Join-Path $portable "*") -DestinationPath "Pulse-中文版-Windows-Portable.zip" -Force
+          Compress-Archive -Path (Join-Path $portable "*") -DestinationPath "Pulse-Windows-Portable.zip" -Force
 
       - name: 上传 Windows 免安装版（唯一构建产物）
         uses: actions/upload-artifact@v4
         with:
-          name: Pulse-中文版-Windows-Portable
-          path: Pulse-中文版-Windows-Portable.zip
+          name: Pulse-Windows-Portable
+          path: Pulse-Windows-Portable.zip
           if-no-files-found: error
           retention-days: 14
 
@@ -103,7 +103,7 @@ jobs:
       - name: 下载本次构建的免安装 ZIP
         uses: actions/download-artifact@v4
         with:
-          name: Pulse-中文版-Windows-Portable
+          name: Pulse-Windows-Portable
           path: release-assets
           run-id: ${{ github.run_id }}
           github-token: ${{ github.token }}
@@ -115,8 +115,9 @@ jobs:
         run: |
           VERSION="$(node -p "require('./src-tauri/tauri.conf.json').version")"
           TAG="v${VERSION}"
-          ASSET="release-assets/Pulse-中文版-Windows-Portable.zip"
+          ASSET="release-assets/Pulse-Windows-Portable.zip"
           if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release delete-asset "${TAG}" "Pulse-.-Windows-Portable.zip" --repo "${GITHUB_REPOSITORY}" --yes || true
             gh release upload "${TAG}" "${ASSET}" --repo "${GITHUB_REPOSITORY}" --clobber
           else
             gh release create "${TAG}" "${ASSET}" \

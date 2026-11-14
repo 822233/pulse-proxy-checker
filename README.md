@@ -95,7 +95,7 @@ Pulse 使用 Tauri 作为桌面外壳，Rust 负责原生桌面功能，Node.js 
 
 前往 [GitHub Releases](../../releases) 下载 **Windows 免安装版**：
 
-- 文件：`Pulse-中文版-Windows-Portable.zip`
+- 文件：`Pulse-Windows-Portable.zip`
 - 使用方法：下载 ZIP → 解压到任意目录 → 运行 `Pulse.exe`
 - 压缩包包含主程序 `Pulse.exe` 和检测引擎 `assets/PulseEngine.exe`，请保持两者的相对目录结构。
 - 当前发布的是免安装 ZIP，不提供 Windows 安装程序；暂未发布 macOS 构建包。
