@@ -156,10 +156,13 @@ listen("free-fetched", (event) => {
       ? `${name}：成功 ${item.count} 个`
       : `${name}：失败（${item.error || "未知错误"}）`
   );
-  lastFetchSummary = { fetched, checking, details };
+  const dnsInfo = Array.isArray(p.dnsServers) && p.dnsServers.length
+    ? `系统 DNS：${p.dnsServers.join(", ")}`
+    : "系统 DNS：未能读取";
+  lastFetchSummary = { fetched, checking, details, dnsInfo };
   checkStatus.textContent = fetched > 0
     ? `已获取 ${fetched} 个，正在检测 ${checking} 个…`
-    : `代理列表获取失败：${details.join("；") || "所有来源均未返回数据"}`;
+    : `代理列表获取失败：${details.join("；") || "所有来源均未返回数据"}；${dnsInfo}`;
 });
 
 function finishCheck() {
@@ -171,7 +174,7 @@ function finishCheck() {
     : `${alive} 个可用 / 共检测 ${total} 个`;
   checkStatus.classList.remove("busy");
   if (lastFetchSummary && lastFetchSummary.fetched === 0) {
-    checkStatus.textContent = `没有获取到代理列表。详细原因：${lastFetchSummary.details.join("；") || "所有来源均未返回数据"}`;
+    checkStatus.textContent = `没有获取到代理列表。详细原因：${lastFetchSummary.details.join("；") || "所有来源均未返回数据"}；${lastFetchSummary.dnsInfo}`;
   } else if (alive > 0) {
     checkStatus.textContent = `检测完成：发现 ${alive} 个可用代理。`;
   } else if (lastFetchSummary) {
