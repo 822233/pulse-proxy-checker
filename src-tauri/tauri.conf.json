@@ -10,7 +10,7 @@
   "app": {
     "windows": [
       {
-        "title": "Pulse",
+        "title": "Pulse 中文版 — 代理检测工具",
         "width": 1100,
         "height": 760,
         "minWidth": 900,

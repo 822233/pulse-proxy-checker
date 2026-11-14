@@ -2,14 +2,14 @@
 
 # ⚡ Pulse 中文版 — 代理检测工具
 
-**快速、本地运行、开源免费的桌面代理检测器。**
+**面向 Windows 的免费开源代理采集、批量检测与本地管理工具。**
 
-批量检测 HTTP、HTTPS、SOCKS4、SOCKS5 代理，从公开代理列表获取候选节点，实时查看检测结果，并将可用代理保存到本地代理池。
+支持 HTTP、HTTPS、SOCKS4、SOCKS5。既可以导入自己的代理，也可以从多个公开来源自动获取候选节点；检测结果实时显示，可用代理可保存到本地代理池。
 
 [![Release](https://img.shields.io/github/v/release/822233/pulse-proxy-checker?include_prereleases&sort=semver)](../../releases)
 [![Stars](https://img.shields.io/github/stars/822233/pulse-proxy-checker)](../../stargazers)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue)](../../releases)
+[![Platform](https://img.shields.io/badge/platform-Windows-blue)](../../releases)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%20%2B%20Rust-orange)](https://tauri.app)
 
 ![Pulse 代理检测结果](docs/screenshots/pulse-results.png)
@@ -20,13 +20,13 @@
 
 ## 项目简介
 
-**Pulse 中文版**是一款免费、开源的桌面代理采集与检测工具。你可以粘贴自己的代理列表，也可以使用内置的公开代理获取功能，批量检测代理是否可用。
+**Pulse 中文版**是一款免费、开源的 Windows 桌面代理采集与检测工具。它把代理列表获取、连通性检测、出口 IP 信息解析和本地代理池管理整合在一个轻量界面中。你可以导入自己的代理，也可以自动获取公开代理候选列表，再批量检测可用性。
 
 程序支持 **HTTP、HTTPS、SOCKS4、SOCKS5** 四种代理协议。对于检测成功的代理，程序会进一步获取出口 IP，并通过本地 GeoIP 数据库解析国家/地区、ISP 和 ASN，同时计算质量评分与风险等级。
 
 检测过程主要在本机完成，不需要配置第三方评分 API，也没有第三方评分 API 的调用额度限制。
 
-项目基于 Tauri、Rust、Node.js 和 Vite 构建，支持 Windows 和 macOS。
+程序基于 Tauri、Rust、Node.js 和 Vite 构建。目前提供 Windows 免安装 ZIP 版本，无需安装程序；解压后运行 `Pulse.exe` 即可。
 
 ## 功能特性
 
@@ -35,7 +35,7 @@
   - 免费代理：从公开代理列表获取候选代理并自动检测。
   - 已保存代理：按协议保存可用代理，随时重新检测和清理。
 - **四种代理协议**：HTTP、HTTPS、SOCKS4、SOCKS5。
-- **实时检测进度**：逐条显示检测结果、成功数量、失败数量和进度。
+- **实时检测进度**：逐条显示检测结果、成功数量、失败数量和进度；检测完成后可按实测延迟查看较快节点。
 - **代理信息解析**：出口 IP、国家/地区、ISP、ASN。
 - **质量与风险评估**：显示质量百分比和低、中、高风险等级。
 - **多条件筛选**：按风险等级、国家/地区、最大延迟和最低质量筛选。
@@ -93,12 +93,12 @@ Pulse 使用 Tauri 作为桌面外壳，Rust 负责原生桌面功能，Node.js 
 
 ## 下载
 
-前往 [GitHub Releases](../../releases) 下载对应系统的安装包：
+前往 [GitHub Releases](../../releases) 下载 **Windows 免安装版**：
 
-- **Windows**：`Pulse_x.y.z_x64-setup.exe`
-- **macOS**：`Pulse_x.y.z_aarch64.dmg`
-
-macOS 版本可能未进行开发者签名。首次打开时，如果系统阻止启动，请根据 macOS 安全提示手动允许。
+- 文件：`Pulse-中文版-Windows-Portable.zip`
+- 使用方法：下载 ZIP → 解压到任意目录 → 运行 `Pulse.exe`
+- 压缩包包含主程序 `Pulse.exe` 和检测引擎 `assets/PulseEngine.exe`，请保持两者的相对目录结构。
+- 当前发布的是免安装 ZIP，不提供 Windows 安装程序；暂未发布 macOS 构建包。
 
 ## 从源码构建
 
@@ -153,16 +153,18 @@ npm run pkg
 
 ## 代理列表来源
 
-内置的「免费代理」功能会在运行时从以下公开项目或服务获取代理列表：
+「免费代理」功能在运行时从多个公开项目或服务获取候选代理，再由 Pulse 在本机进行连通性检测。当前配置的来源包括：
 
-| 来源 | 项目/作者 | 许可或说明 |
+| 来源 | 支持协议 | 许可或说明 |
 |---|---|---|
-| PROXY-List | TheSpeedX | 按上游项目要求注明来源 |
-| proxy-list | monosans | MIT |
-| free-proxy-list | Proxifly | GPLv3 |
-| ProxyScrape | ProxyScrape | 免费服务额度及条款以其官方说明为准 |
+| TheSpeedX | HTTP、SOCKS4、SOCKS5 | 上游公开列表 |
+| monosans | HTTP、SOCKS4、SOCKS5 | MIT |
+| Proxifly | HTTP、SOCKS5 | GPLv3 |
+| ProxyScrape | HTTP、SOCKS4、SOCKS5 | 免费服务条款以官方说明为准 |
+| maximilianfeix/free-proxy-list | HTTP | 上游验证并按速度排序；MIT |
+| litportnet/free-proxy-list | HTTP、SOCKS5 | 定时更新；MIT（数据许可另见上游说明） |
 
-Pulse 在运行时获取公开代理列表并进行检测，不将上述来源的代理列表作为本项目自有数据打包发布。请遵守各来源的使用条款。
+公开代理的在线率、速度和稳定性会随时间变化。列表来源的更新频率或上游验证结果不代表代理在你的网络环境中一定可用。Pulse 会重新进行本机检测，不将上述来源的代理列表作为本项目自有数据打包发布。请遵守各来源的使用条款。
 
 ## 隐私说明
 

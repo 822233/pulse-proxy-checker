@@ -6,8 +6,8 @@ use serde::Serialize;
 use tauri::AppHandle;
 
 const LATEST_RELEASE_API: &str =
-    "https://api.github.com/repos/lewispour/pulse-proxy-checker/releases/latest";
-const RELEASES_PAGE: &str = "https://github.com/lewispour/pulse-proxy-checker/releases/latest";
+    "https://api.github.com/repos/822233/pulse-proxy-checker/releases/latest";
+const RELEASES_PAGE: &str = "https://github.com/822233/pulse-proxy-checker/releases/latest";
 
 #[derive(Debug, Clone, Serialize)]
 pub struct UpdateInfo {
