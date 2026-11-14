@@ -69,8 +69,8 @@ function startNativeMessagingHost() {
     // Fetch free proxies from public sources and return the raw list.
     if (msg.type === 'fetch-free') {
       const id = msg.id;
-      const { proxies, perSource, sourceDetails } = await fetchFreeProxies(msg.protocol);
-      send(process.stdout, { type: 'fetch-free-result', id, proxies, perSource, sourceDetails });
+      const { proxies, perSource, sourceDetails, dnsServers } = await fetchFreeProxies(msg.protocol);
+      send(process.stdout, { type: 'fetch-free-result', id, proxies, perSource, sourceDetails, dnsServers });
       return;
     }
 
@@ -78,13 +78,13 @@ function startNativeMessagingHost() {
     if (msg.type === 'find-alive') {
       const id = msg.id;
       const options = msg.options || {};
-      const { proxies: all, perSource, sourceDetails } = await fetchFreeProxies(msg.protocol);
+      const { proxies: all, perSource, sourceDetails, dnsServers } = await fetchFreeProxies(msg.protocol);
 
       // limit <= 0 (or missing) means "check all". Otherwise sample `limit` at
       // random (shuffled so we span sources, not always the same head).
       const limit = options.limit && options.limit > 0 ? options.limit : 0;
       const proxies = limit > 0 ? shuffle(all).slice(0, limit) : all;
-      send(process.stdout, { type: 'fetch-free-result', id, proxies, perSource, sourceDetails, fetched: all.length, checking: proxies.length });
+      send(process.stdout, { type: 'fetch-free-result', id, proxies, perSource, sourceDetails, dnsServers, fetched: all.length, checking: proxies.length });
 
       const results = await checkProxies(proxies, options, (result, done, total) => {
         send(process.stdout, { type: 'proxy-progress', id, result, done, total });
