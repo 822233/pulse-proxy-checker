@@ -97,6 +97,9 @@ jobs:
     needs: windows-portable
     runs-on: ubuntu-latest
     steps:
+      - name: 检出版本配置
+        uses: actions/checkout@v4
+
       - name: 下载本次构建的免安装 ZIP
         uses: actions/download-artifact@v4
         with:
@@ -105,12 +108,20 @@ jobs:
           run-id: ${{ github.run_id }}
           github-token: ${{ github.token }}
 
-      - name: 创建 GitHub Release 并上传 ZIP
+      - name: 根据项目版本创建或更新 GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          gh release create v1.0.1 "release-assets/Pulse-中文版-Windows-Portable.zip" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --target "${GITHUB_SHA}" \
-            --title "Pulse 中文版 v1.0.1" \
-            --notes "Windows 免安装版。下载 ZIP 后解压，运行 Pulse.exe 即可。请保持 assets/PulseEngine.exe 相对目录结构。"
+          VERSION="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          TAG="v${VERSION}"
+          ASSET="release-assets/Pulse-中文版-Windows-Portable.zip"
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "${ASSET}" --repo "${GITHUB_REPOSITORY}" --clobber
+          else
+            gh release create "${TAG}" "${ASSET}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --target "${GITHUB_SHA}" \
+              --title "Pulse 中文版 ${TAG}" \
+              --notes "Windows 免安装版。下载 ZIP 后解压，运行 Pulse.exe 即可。请保持 assets/PulseEngine.exe 相对目录结构。"
+          fi
