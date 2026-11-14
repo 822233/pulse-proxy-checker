@@ -46,6 +46,7 @@ const findAliveBtn = $("btn-find-alive");
 
 let checkRunning = false;
 let cancelled = false;
+let lastFetchSummary = null;
 
 // Normalize a raw proxy string to its host:port identity (for dedup).
 function proxyKey(raw) {
@@ -128,6 +129,7 @@ findAliveBtn.addEventListener("click", async () => {
   findAliveBtn.disabled = true;
   cancelled = false;
   checkRunning = true;
+  lastFetchSummary = null;
   beginResults();
   checkTitle.textContent = "正在获取并检测可用代理…";
   checkStatus.classList.add("busy");
@@ -147,18 +149,36 @@ findAliveBtn.addEventListener("click", async () => {
 
 listen("free-fetched", (event) => {
   const p = event.payload || {};
-  const fetched = p.fetched || (p.proxies ? p.proxies.length : 0);
-  const checking = p.checking || (p.proxies ? p.proxies.length : 0);
-  checkStatus.textContent = `已获取 ${fetched} 个，正在检测 ${checking} 个…`;
+  const fetched = Number.isFinite(p.fetched) ? p.fetched : (p.proxies ? p.proxies.length : 0);
+  const checking = Number.isFinite(p.checking) ? p.checking : (p.proxies ? p.proxies.length : 0);
+  const details = Object.entries(p.sourceDetails || {}).map(([name, item]) =>
+    item.ok
+      ? `${name}：成功 ${item.count} 个`
+      : `${name}：失败（${item.error || "未知错误"}）`
+  );
+  lastFetchSummary = { fetched, checking, details };
+  checkStatus.textContent = fetched > 0
+    ? `已获取 ${fetched} 个，正在检测 ${checking} 个…`
+    : `代理列表获取失败：${details.join("；") || "所有来源均未返回数据"}`;
 });
 
 function finishCheck() {
   if (cancelled) return;
   const alive = liveWorking;
   const total = lastResults.length;
-  checkTitle.textContent = `${alive} 个可用 / 共检测 ${total} 个`;
+  checkTitle.textContent = lastFetchSummary && lastFetchSummary.fetched === 0
+    ? "代理列表获取失败"
+    : `${alive} 个可用 / 共检测 ${total} 个`;
   checkStatus.classList.remove("busy");
-  checkStatus.textContent = alive > 0 ? `检测完成：发现 ${alive} 个可用代理。` : "没有发现可用代理。";
+  if (lastFetchSummary && lastFetchSummary.fetched === 0) {
+    checkStatus.textContent = `没有获取到代理列表。详细原因：${lastFetchSummary.details.join("；") || "所有来源均未返回数据"}`;
+  } else if (alive > 0) {
+    checkStatus.textContent = `检测完成：发现 ${alive} 个可用代理。`;
+  } else if (lastFetchSummary) {
+    checkStatus.textContent = `已获取 ${lastFetchSummary.fetched} 个代理，但没有检测到可用代理。`;
+  } else {
+    checkStatus.textContent = "没有发现可用代理。";
+  }
   updateActionButtons();
   populateCountryFilter();
   rerenderResults();
