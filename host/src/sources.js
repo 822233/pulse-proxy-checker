@@ -273,7 +273,7 @@ async function fetchFreeProxies(protocol) {
   });
 
   logToFile('fetchFreeProxies', proto, proxies.length, perSource, sourceDetails);
-  return { proxies, perSource, sourceDetails, protocol: proto };
+  return { proxies, perSource, sourceDetails, protocol: proto, dnsServers: dns.getServers() };
 }
 
 module.exports = { fetchFreeProxies, parseLines, SOURCES, getSystemProxyUrl, describeError, createIPv4FirstLookup };
