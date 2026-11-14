@@ -2,10 +2,13 @@ name: 中文版构建验证（仅免安装版）
 
 on:
   push:
-    branches: [chinese-localization]
+    branches: [chinese-localization, main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   windows-portable:
@@ -87,3 +90,26 @@ jobs:
           path: Pulse-中文版-Windows-Portable.zip
           if-no-files-found: error
           retention-days: 14
+
+  publish-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: windows-portable
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载本次构建的免安装 ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: Pulse-中文版-Windows-Portable
+          path: release-assets
+          run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: 创建 GitHub Release 并上传 ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create v1.0.1 "release-assets/Pulse-中文版-Windows-Portable.zip" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "Pulse 中文版 v1.0.1" \
+            --notes "Windows 免安装版。下载 ZIP 后解压，运行 Pulse.exe 即可。请保持 assets/PulseEngine.exe 相对目录结构。"
