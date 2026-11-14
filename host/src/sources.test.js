@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('assert');
-const { parseLines, describeError, SOURCES } = require('./sources');
+const { parseLines, describeError, SOURCES, createIPv4FirstLookup } = require('./sources');
 
 assert.deepStrictEqual(parseLines([
   '127.0.0.1:8080',
@@ -22,4 +22,16 @@ assert.strictEqual(SOURCES.socks5[2].urls.length, 2);
 assert.match(describeError(Object.assign(new Error('lookup failed'), { code: 'ENOTFOUND' })), /DNS/);
 assert.match(describeError(Object.assign(new Error('socket timeout'), { code: 'ETIMEDOUT' })), /超时/);
 
-process.stdout.write('sources tests passed\n');
+// Prefer IPv4 while preserving the OS-provided DNS result set.
+const fakeLookup = (_host, _options, cb) => cb(null, [
+  { address: '2001:db8::1', family: 6 },
+  { address: '192.0.2.10', family: 4 },
+]);
+const ipv4First = createIPv4FirstLookup(fakeLookup);
+ipv4First('raw.githubusercontent.com', {}, (err, address, family) => {
+  assert.ifError(err);
+  assert.strictEqual(address, '192.0.2.10');
+  assert.strictEqual(family, 4);
+});
+
+process.stdout.write('sources tests passed\\n');
